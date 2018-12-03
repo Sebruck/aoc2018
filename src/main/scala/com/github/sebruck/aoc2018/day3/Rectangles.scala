@@ -1,6 +1,5 @@
 package com.github.sebruck.aoc2018.day3
 
-import com.github.sebruck.aoc2018.day3
 import com.github.sebruck.aoc2018.util.Input
 
 import scala.util.Try
