@@ -21,24 +21,33 @@ object Dimensions {
   }
 }
 
-case class Claim(topLeft: Coordinates, dimensions: Dimensions)
+case class Claim(id: Int, topLeft: Coordinates, dimensions: Dimensions) {
+  val allPoints: Set[Coordinates] =
+    (for {
+      addX <- 1 to dimensions.width
+      addY <- 1 to dimensions.height
+    } yield
+      topLeft
+        .copy(x = topLeft.x + addX, y = topLeft.y + addY)).toSet
+}
 
 object Rectangles {
 
   def countOverlaps(claims: List[Claim]): Int = {
-    def getPoints(claim: Claim): Seq[Coordinates] =
-      for {
-        addX <- 1 to claim.dimensions.width
-        addY <- 1 to claim.dimensions.height
-      } yield
-        claim.topLeft
-          .copy(x = claim.topLeft.x + addX, y = claim.topLeft.y + addY)
-
     claims
-      .flatMap(getPoints)
+      .flatMap(_.allPoints)
       .groupBy(identity)
       .values
       .count(_.size > 1)
+  }
+
+  def withoutOverlap(claims: List[Claim]): Option[Claim] = {
+    def noOverlaps(claim1: Claim)(claim2: Claim): Boolean =
+      claim1.allPoints.intersect(claim2.allPoints).isEmpty
+
+    claims.find(claim =>
+      claims.forall(otherClaim =>
+        claim.id == otherClaim.id || noOverlaps(claim)(otherClaim)))
   }
 }
 
@@ -46,10 +55,13 @@ object RunRectangles extends App {
   val claims = Input
     .load("day3.txt")
     .map { line =>
-      val box = line.split("@")(1)
+      val Array(id, box) = line.split("@")
       val parts = box.split(":")
-      Claim(Coordinates(parts(0).trim).get, Dimensions(parts(1).trim).get)
+      Claim(id.trim.substring(1).toInt,
+            Coordinates(parts(0).trim).get,
+            Dimensions(parts(1).trim).get)
     }
 
   println(Rectangles.countOverlaps(claims))
+  println(Rectangles.withoutOverlap(claims))
 }
