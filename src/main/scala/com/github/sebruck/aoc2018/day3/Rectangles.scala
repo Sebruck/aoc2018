@@ -1,56 +1,72 @@
 package com.github.sebruck.aoc2018.day3
 
+import cats.syntax.foldable._
 import com.github.sebruck.aoc2018.util.Input
 
 import scala.util.Try
 
-case class Coordinates(x: Int, y: Int)
-object Coordinates {
-  def apply(stringRepresentation: String): Try[Coordinates] = Try {
-    val parts = stringRepresentation.split(",")
-    Coordinates(parts(0).toInt, parts(1).toInt)
-  }
-}
-
-case class Dimensions(width: Int, height: Int)
-object Dimensions {
-  def apply(stringRepresentation: String): Try[Dimensions] = Try {
-    val parts = stringRepresentation.split("x")
-    Dimensions(parts(0).toInt, parts(1).toInt)
-  }
-}
-
-case class Claim(id: Int, topLeft: Coordinates, dimensions: Dimensions) {
-  val allPoints: Set[Coordinates] =
-    (for {
-      addX <- 1 to dimensions.width
-      addY <- 1 to dimensions.height
-    } yield
-      topLeft
-        .copy(x = topLeft.x + addX, y = topLeft.y + addY)).toSet
-}
-
 object Rectangles {
 
-  def countOverlaps(claims: List[Claim]): Int = {
-    claims
-      .flatMap(_.allPoints)
-      .groupBy(identity)
+  def countOverlaps[A, T](elements: List[T])(
+      implicit uf: Unfoldable[T, A]): Int = {
+    import cats.instances.int._
+    import cats.instances.list._
+    import cats.instances.map._
+
+    elements
+      .flatMap(element => uf.unfold(element))
+      .foldMap(unfolded => Map(unfolded -> 1))
       .values
-      .count(_.size > 1)
+      .count(_ > 1)
   }
 
-  def withoutOverlap(claims: List[Claim]): Option[Claim] = {
-    def noOverlaps(claim1: Claim)(claim2: Claim): Boolean =
-      claim1.allPoints.intersect(claim2.allPoints).isEmpty
+  def withoutOverlap[A, T](elements: List[T])(
+      implicit uf: Unfoldable[T, A],
+      id: Identifiable[T]): Option[T] = {
 
-    claims.find(claim =>
-      claims.forall(otherClaim =>
-        claim.id == otherClaim.id || noOverlaps(claim)(otherClaim)))
+    def noOverlaps(element1: T)(element2: T): Boolean =
+      id.id(element1) == id.id(element2) || uf
+        .unfold(element1)
+        .toSet
+        .intersect(uf.unfold(element2).toSet)
+        .isEmpty
+
+    elements.find(element => elements.forall(noOverlaps(element)))
   }
 }
 
 object RunRectangles extends App {
+  case class Coordinates(x: Int, y: Int)
+  object Coordinates {
+    def apply(stringRepresentation: String): Try[Coordinates] = Try {
+      val parts = stringRepresentation.split(",")
+      Coordinates(parts(0).toInt, parts(1).toInt)
+    }
+  }
+
+  case class Dimensions(width: Int, height: Int)
+  object Dimensions {
+    def apply(stringRepresentation: String): Try[Dimensions] = Try {
+      val parts = stringRepresentation.split("x")
+      Dimensions(parts(0).toInt, parts(1).toInt)
+    }
+  }
+  case class Claim(id: Int, topLeft: Coordinates, dimensions: Dimensions)
+
+  implicit object ClaimTypeClassInstance
+      extends Unfoldable[Claim, Coordinates]
+      with Identifiable[Claim] {
+    override def id(claim: Claim): Int = claim.id
+
+    override def unfold(claim: Claim): List[Coordinates] =
+      (for {
+        addX <- 1 to claim.dimensions.width
+        addY <- 1 to claim.dimensions.height
+      } yield
+        claim.topLeft
+          .copy(x = claim.topLeft.x + addX, y = claim.topLeft.y + addY)).toList
+  }
+
   val claims = Input
     .load("day3.txt")
     .map { line =>

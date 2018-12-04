@@ -5,18 +5,41 @@ import Rectangles._
 
 class RectanglesSpec extends FlatSpec with Matchers with OptionValues {
 
-  val claims = List(
-    Claim(1, Coordinates(1, 3), Dimensions(4, 4)),
-    Claim(2, Coordinates(3, 1), Dimensions(4, 4)),
-    Claim(3, Coordinates(5, 5), Dimensions(2, 2))
-  )
-
-  "countOverlaps" should "return the correct amount of overlaps" in {
-
-    countOverlaps(claims) shouldBe 4
+  case class TestElement(id: Int, x: List[Int])
+  implicit object TestTypeClasses
+      extends Unfoldable[TestElement, Int]
+      with Identifiable[TestElement] {
+    override def unfold(x: TestElement): List[Int] = x.x
+    override def id(x: TestElement): Int = x.id
   }
 
-  "withoutOverlap" should "return the claim without an overlap" in {
-    withoutOverlap(claims).value.id shouldBe 3
+  "countOverlaps" should "return the correct amount of overlaps" in {
+    val testInput = List(
+      TestElement(1, List(1, 2, 3, 4)),
+      TestElement(2, List(2, 3, 5, 6)),
+      TestElement(3, List(6, 7, 8))
+    )
+    countOverlaps(testInput) shouldBe 3
+  }
+
+  "countOverlaps" should "0 on empty input" in {
+    countOverlaps(List.empty) shouldBe 0
+  }
+
+  "withoutOverlap" should "return the element without an overlap" in {
+    val testInput = List(
+      TestElement(1, List(1, 2, 3, 4)),
+      TestElement(2, List(2, 3, 5, 6)),
+      TestElement(3, List(7, 8, 9))
+    )
+    withoutOverlap(testInput).value.id shouldBe 3
+  }
+
+  "withoutOverlap" should "return None when all elements have overlaps" in {
+    val testInput = List(
+      TestElement(1, List(1, 2, 3, 4)),
+      TestElement(2, List(2, 3, 5, 6))
+    )
+    withoutOverlap(testInput) shouldBe empty
   }
 }
