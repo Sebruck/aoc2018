@@ -1,6 +1,5 @@
 package com.github.sebruck.aoc2018.day3
 
-import cats.syntax.foldable._
 import com.github.sebruck.aoc2018.util.Input
 
 import scala.util.Try
@@ -8,17 +7,11 @@ import scala.util.Try
 object Rectangles {
 
   def countOverlaps[A, T](elements: List[T])(
-      implicit uf: Unfoldable[T, A]): Int = {
-    import cats.instances.int._
-    import cats.instances.list._
-    import cats.instances.map._
-
+      implicit uf: Unfoldable[T, A]): Int =
     elements
       .flatMap(element => uf.unfold(element))
-      .foldMap(unfolded => Map(unfolded -> 1))
-      .values
-      .count(_ > 1)
-  }
+      .groupBy(identity)
+      .count(_._2.length > 1)
 
   def withoutOverlap[A, T](elements: List[T])(
       implicit uf: Unfoldable[T, A],
