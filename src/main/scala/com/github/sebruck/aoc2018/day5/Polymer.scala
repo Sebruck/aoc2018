@@ -5,20 +5,20 @@ import com.github.sebruck.aoc2018.util.Input
 object Polymer {
   def react(units: String): String =
     units
-      .foldLeft("")(
+      .foldLeft(List.empty[Char])(
         (acc, current) =>
           acc.headOption
             .map(last =>
               if (current != last && current.toLower == last.toLower) acc.tail
-              else current + acc)
-            .getOrElse(current + acc)
+              else current :: acc)
+            .getOrElse(current :: acc)
       )
       .reverse
+      .mkString
 
   def findShortest(units: String): String = {
     ('a' to 'z')
-      .map(unitType =>
-        units.replaceAll(s"[${unitType}${unitType.toUpper}]", ""))
+      .map(unitType => units.filter(_.toLower != unitType))
       .map(react)
       .minBy(_.length)
   }
